@@ -4,7 +4,9 @@ from flowit.core.runnable_component import IRunnableComponent
 
 
 class Workflow(IRunnableComponent):
-    def __init__(self):
+    def __init__(self, name: str = None):
+        super().__init__(name=name)
+
         self._components_dag = nx.DiGraph()
         self._components_required_inputs = {}
         self._components_outputs = {}
