@@ -34,17 +34,27 @@ class Workflow(IRunnableComponent):
 
         # run every node with its desired inputs
         for node in ordered_nodes:
-            if node not in self._components_required_inputs:
-                node_outputs = node.process()
-            else:
-                input_dict = {}
-                for pre_node in self._components_required_inputs[node]:
-                    for pre_node_output in self._components_required_inputs[node][pre_node]:
-                        param_name = self._components_required_inputs[node][pre_node][pre_node_output]
-                        param_value = self._components_outputs[pre_node][pre_node_output]
-                        input_dict[param_name] = param_value
-                node_outputs = node.process(**input_dict)
-            self._components_outputs[node] = node_outputs
+            self._execute_internal_runnable_component(node)
         if self._output_component is not None:
             return self._components_outputs[self._output_component]
         return None
+
+    def _execute_internal_runnable_component(self, node):
+        # in case of node without inputs, we just execute him
+        if node not in self._components_required_inputs:
+            node_outputs = node.process()
+        else:
+            pre_computed_node_inputs_dict = self._get_node_computed_inputs(node)
+            node_outputs = node.process(**pre_computed_node_inputs_dict)
+        if node_outputs is not None:
+            self._components_outputs[node] = node_outputs
+
+    def _get_node_computed_inputs(self, node):
+        input_dict = {}
+        for pre_node in self._components_required_inputs[node]:
+            for pre_node_output in self._components_required_inputs[node][pre_node]:
+                param_name = self._components_required_inputs[node][pre_node][pre_node_output]
+                param_value = self._components_outputs[pre_node][pre_node_output]
+                input_dict[param_name] = param_value
+        return input_dict
+
