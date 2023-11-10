@@ -51,10 +51,20 @@ class Workflow(IRunnableComponent):
 
     def _get_node_computed_inputs(self, node):
         input_dict = {}
+        # we must follow whether input became list already for future appends
+        input_list_transformed_lst = []
         for pre_node in self._components_required_inputs[node]:
             for pre_node_output in self._components_required_inputs[node][pre_node]:
                 param_name = self._components_required_inputs[node][pre_node][pre_node_output]
                 param_value = self._components_outputs[pre_node][pre_node_output]
-                input_dict[param_name] = param_value
+
+                # for multiple inputs to the same node input, we transform to list
+                if param_name not in input_dict:
+                    input_dict[param_name] = param_value
+                else:
+                    if param_name not in input_list_transformed_lst:
+                        input_dict[param_name] = [input_dict[param_name]]
+                        input_list_transformed_lst.append(param_name)
+                    input_dict[param_name].append(param_value)
         return input_dict
 
