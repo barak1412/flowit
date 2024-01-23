@@ -11,6 +11,7 @@ class Workflow(IRunnableComponent):
         self._components_required_inputs = {}
         self._components_outputs = {}
         self._output_component = None
+        self._input_component = None
 
     def add_link(self, src_component: IRunnableComponent, dst_component: IRunnableComponent,
                  params_mapping: Dict[str, str]):
@@ -24,6 +25,9 @@ class Workflow(IRunnableComponent):
             raise Exception('You may not set a node that does not exist in graph')
         self._output_component = runnable_component
 
+    def set_input_component(self, runnable_component):
+        self._input_component = runnable_component
+
     def process(self, *args, **kwargs):
         # verify DAG
         if not nx.is_directed_acyclic_graph(self._components_dag):
@@ -34,7 +38,12 @@ class Workflow(IRunnableComponent):
 
         # run every node with its desired inputs
         for node in ordered_nodes:
-            self._execute_internal_runnable_component(node)
+            if node == self._input_component:
+                node_outputs = self._input_component.process(*args, **kwargs)
+            else:
+                node_outputs = self._execute_internal_runnable_component(node)
+            if node_outputs is not None:
+                self._components_outputs[node] = node_outputs
         if self._output_component is not None:
             return self._components_outputs[self._output_component]
         return None
@@ -46,8 +55,7 @@ class Workflow(IRunnableComponent):
         else:
             pre_computed_node_inputs_dict = self._get_node_computed_inputs(node)
             node_outputs = node.process(**pre_computed_node_inputs_dict)
-        if node_outputs is not None:
-            self._components_outputs[node] = node_outputs
+        return node_outputs
 
     def _get_node_computed_inputs(self, node):
         input_dict = {}
